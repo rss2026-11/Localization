@@ -38,6 +38,10 @@ class MotionModel(Node):
 
     # Store the most recent odometry message
     def odom_callback(self, msg):
+        if self.latest_odom is not None:
+            dt = msg.header.stamp.sec - self.latest_odom.header.stamp.sec + \
+                 msg.header.stamp.nanosec * 1e-9 - self.latest_odom.header.stamp.nanosec * 1e-9
+
         self.latest_odom = msg
 
     # Main motion model used by the particle filter
