@@ -41,8 +41,6 @@ class ParticleFilter(Node):
 
         self.laser_sub = self.create_subscription(LaserScan, scan_topic, self.laser_callback, 1)
 
-        self.odom_sub = self.create_subscription(Odometry, odom_topic, self.odom_callback, 1)
-
         #  *Important Note #2:* You must respond to pose
         #   initialization requests sent to the /initialpose
         #   topic. You can test that this works properly using the
@@ -68,7 +66,6 @@ class ParticleFilter(Node):
         # Particle state
         self.particles = None
         self.weights = None
-        self.prev_odom_time = None
 
         self.get_logger().info("=============+READY+=============")
 
@@ -95,41 +92,9 @@ class ParticleFilter(Node):
         self.particles[:, 2] = theta + np.random.normal(0, 0.3, self.num_particles)
 
         self.weights = np.ones(self.num_particles) / self.num_particles
-        self.prev_odom_time = None
+        self.motion_model.latest_odom = None
 
         self.get_logger().info("Particles initialized around (%.2f, %.2f, %.2f)" % (x, y, theta))
-
-    def odom_callback(self, msg):
-        """Use odometry twist to update particles via the motion model."""
-        if self.particles is None:
-            return
-
-        current_time = msg.header.stamp.sec + msg.header.stamp.nanosec * 1e-9
-        if self.prev_odom_time is None:
-            self.prev_odom_time = current_time
-            return
-        dt = current_time - self.prev_odom_time
-        self.prev_odom_time = current_time
-
-        if dt <= 0:
-            return
-
-        v = msg.twist.twist.linear.x
-        vy = msg.twist.twist.linear.y
-        omega = msg.twist.twist.angular.z
-
-        # Convert to body-frame displacement
-        dx = v * dt
-        dy = vy * dt
-        dtheta = omega * dt
-
-        self.get_logger().info("dt: %.4f, v: %.4f, dx: %.6f" % (dt, v, dx))
-
-        # Update particles
-        self.particles = self.motion_model.evaluate(self.particles, [dx, dy, dtheta])
-
-        # Publish estimated pose
-        self.publish_pose()
 
     def laser_callback(self, msg):
         """Use lidar scan to weight and resample particles."""
@@ -152,8 +117,8 @@ class ParticleFilter(Node):
 
         # Normalize weights
         weight_sum = np.sum(self.weights)
-        
-    
+
+
         if weight_sum == 0:
             self.weights = np.ones(self.num_particles) / self.num_particles
         else:
@@ -233,7 +198,7 @@ def main(args=None):
 #         #     a twist component, you will only be provided with the
 #         #     twist component, so you should rely only on that
 #         #     information, and *not* use the pose component.
-        
+
 #         self.declare_parameter('odom_topic', "/odom")
 #         self.declare_parameter('scan_topic', "/scan")
 

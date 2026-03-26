@@ -57,6 +57,9 @@ class MotionModel:
             # Automatically update the node's particles array if it has one!
             if hasattr(self.node, 'particles') and self.node.particles is not None:
                 self.node.particles = self.evaluate(self.node.particles, odometry)
+                # Publish the updated pose
+                if hasattr(self.node, 'publish_pose'):
+                    self.node.publish_pose()
 
         self.latest_odom = msg
 
