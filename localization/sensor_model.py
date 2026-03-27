@@ -11,7 +11,6 @@ import sys
 
 np.set_printoptions(threshold=sys.maxsize)
 
-
 class SensorModel:
 
     def __init__(self, node):
@@ -31,11 +30,11 @@ class SensorModel:
 
         ####################################
         # Adjust these parameters
-        self.alpha_hit = 0
-        self.alpha_short = 0
-        self.alpha_max = 0
-        self.alpha_rand = 0
-        self.sigma_hit = 0
+        self.alpha_hit = 0.74
+        self.alpha_short = 0.07
+        self.alpha_max = 0.07
+        self.alpha_rand = 0.12
+        self.sigma_hit = 8.0
 
         # Your sensor table will be a `table_width` x `table_width` np array:
         self.table_width = 201
@@ -85,9 +84,30 @@ class SensorModel:
 
         returns:
             No return type. Directly modify `self.sensor_model_table`.
-        """
+        """ 
+        
+        z_max = self.table_width - 1
+        z = np.arange(self.table_width)
 
-        raise NotImplementedError
+        for d in range(self.table_width):
+
+
+            p_hit = (1 / np.sqrt(2 * np.pi * self.sigma_hit**2)) * np.exp(-(z - d)**2 / (2 * self.sigma_hit**2))
+            p_hit = p_hit / p_hit.sum()
+        
+            if d == 0:
+                p_short = np.zeros(self.table_width)
+            else:
+                p_short = np.where(z <= d, (2/d) * (1 - z/d), 0)
+
+            p_max = np.where(z == z_max, 1, 0)
+
+            p_rand = 1.0 / z_max
+
+            self.sensor_model_table[:, d] = (self.alpha_hit * p_hit + self.alpha_short * p_short + self.alpha_max * p_max + self.alpha_rand * p_rand)
+
+        self.sensor_model_table = self.sensor_model_table / self.sensor_model_table.sum(axis=0)
+            
 
     def evaluate(self, particles, observation):
         """
@@ -122,6 +142,27 @@ class SensorModel:
         # This produces a matrix of size N x num_beams_per_particle 
 
         scans = self.scan_sim.scan(particles)
+
+        # Convert meters to pixels
+        scans = scans / (self.resolution * self.lidar_scale_to_map_scale)
+        observation = observation / (self.resolution * self.lidar_scale_to_map_scale)
+
+        # Clip to table range
+        scans = np.clip(scans, 0, self.table_width - 1)
+        observation = np.clip(observation, 0, self.table_width - 1)
+
+        # Cast to integers for table lookup
+        scans = scans.astype(int)
+        observation = observation.astype(int)
+
+        # Look up probabilities from table
+        probs = self.sensor_model_table[observation, scans]
+
+        # Combine beam probabilities per particle
+        log_probs = np.sum(np.log(probs), axis=1)
+        probabilities = np.exp(log_probs)
+
+        return probabilities
 
         ####################################
 
