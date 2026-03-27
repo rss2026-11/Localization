@@ -117,4 +117,4 @@ class MotionModel:
         theta_new = (theta_new + np.pi) % (2 * np.pi) - np.pi
 
         # Return updated particle set
-        return np.vstack((x_new, y_new, theta_new)).T
+        return np.column_stack((x_new, y_new, theta_new))

@@ -2,7 +2,7 @@ from localization.sensor_model import SensorModel
 from localization.motion_model import MotionModel
 
 from nav_msgs.msg import Odometry
-from geometry_msgs.msg import PoseWithCovarianceStamped
+from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import TransformStamped
 from tf_transformations import euler_from_quaternion
@@ -57,6 +57,7 @@ class ParticleFilter(Node):
         #     "/map" frame.
 
         self.odom_pub = self.create_publisher(Odometry, "/pf/pose/odom", 1)
+        self.particle_pub = self.create_publisher(PoseArray, "/particles", 1)
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
 
         # Initialize the models
@@ -146,34 +147,72 @@ class ParticleFilter(Node):
         if self.particles is None:
             return
 
-        avg_x = np.mean(self.particles[:, 0])
-        avg_y = np.mean(self.particles[:, 1])
-        avg_theta = np.arctan2(
+        avg_x = float(np.mean(self.particles[:, 0]))
+        avg_y = float(np.mean(self.particles[:, 1]))
+        avg_theta = float(np.arctan2(
             np.mean(np.sin(self.particles[:, 2])),
             np.mean(np.cos(self.particles[:, 2]))
-        )
+        ))
 
         # Publish as Odometry message
         odom_msg = Odometry()
         odom_msg.header.stamp = self.get_clock().now().to_msg()
         odom_msg.header.frame_id = "/map"
+        odom_msg.child_frame_id = self.particle_filter_frame
+        
         odom_msg.pose.pose.position.x = avg_x
         odom_msg.pose.pose.position.y = avg_y
-        odom_msg.pose.pose.orientation.z = np.sin(avg_theta / 2.0)
-        odom_msg.pose.pose.orientation.w = np.cos(avg_theta / 2.0)
+        odom_msg.pose.pose.position.z = 0.0
+        
+        odom_msg.pose.pose.orientation.x = 0.0
+        odom_msg.pose.pose.orientation.y = 0.0
+        odom_msg.pose.pose.orientation.z = float(np.sin(avg_theta / 2.0))
+        odom_msg.pose.pose.orientation.w = float(np.cos(avg_theta / 2.0))
+        
         self.odom_pub.publish(odom_msg)
 
         # Publish TF: map -> particle_filter_frame
         t = TransformStamped()
-        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.stamp = odom_msg.header.stamp
         t.header.frame_id = "/map"
         t.child_frame_id = self.particle_filter_frame
+        
         t.transform.translation.x = avg_x
         t.transform.translation.y = avg_y
         t.transform.translation.z = 0.0
-        t.transform.rotation.z = np.sin(avg_theta / 2.0)
-        t.transform.rotation.w = np.cos(avg_theta / 2.0)
+        
+        t.transform.rotation.x = 0.0
+        t.transform.rotation.y = 0.0
+        t.transform.rotation.z = float(np.sin(avg_theta / 2.0))
+        t.transform.rotation.w = float(np.cos(avg_theta / 2.0))
+        
         self.tf_broadcaster.sendTransform(t)
+        
+        self.publish_particles()
+
+    def publish_particles(self):
+        """Publish particles as a PoseArray for RViz visualization."""
+        if self.particles is None:
+            return
+            
+        pose_array = PoseArray()
+        pose_array.header.stamp = self.get_clock().now().to_msg()
+        pose_array.header.frame_id = "/map"
+        
+        poses = []
+        for x, y, theta in self.particles:
+            pose = Pose()
+            pose.position.x = float(x)
+            pose.position.y = float(y)
+            pose.position.z = 0.0
+            pose.orientation.x = 0.0
+            pose.orientation.y = 0.0
+            pose.orientation.z = float(np.sin(theta / 2.0))
+            pose.orientation.w = float(np.cos(theta / 2.0))
+            poses.append(pose)
+            
+        pose_array.poses = poses
+        self.particle_pub.publish(pose_array)
 
 
 def main(args=None):
