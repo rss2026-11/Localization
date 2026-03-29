@@ -44,4 +44,3 @@ particle_filter:
     sigma_x: 0.1
     sigma_y: 0.1
     sigma_theta: 0.1
-
