@@ -104,6 +104,11 @@ class ParticleFilter(Node):
 
         # Downsample the scan to match num_beams_per_particle
         ranges = np.array(msg.ranges)
+        # BUG FIX: Real Lidars (and simulators sometimes) return NaN or Inf
+        # when a ray doesn't hit anything. This will crash numpy operations downstream.
+        ranges[np.isnan(ranges)] = msg.range_max
+        ranges[np.isinf(ranges)] = msg.range_max
+
         num_beams = self.sensor_model.num_beams_per_particle
         indices = np.linspace(0, len(ranges) - 1, num_beams, dtype=int)
         downsampled = ranges[indices]

@@ -158,13 +158,16 @@ class SensorModel:
         # Look up probabilities from table
         probs = self.sensor_model_table[observation, scans]
 
-        # Combine beam probabilities per particle
+        # Combine beam probabilities per particle using log addition
         log_probs = np.sum(np.log(probs), axis=1)
+        
+        # PREVENT UNDERFLOW: Subtract the max log_prob before exp()
+        # This is a standard math trick in particle filters to stop exp() from 
+        # dropping your low-probability particles completely to absolute 0.0
+        log_probs = log_probs - np.max(log_probs)
         probabilities = np.exp(log_probs)
 
         return probabilities
-
-        ####################################
 
     def map_callback(self, map_msg):
         # Convert the map to a numpy array
