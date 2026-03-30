@@ -30,10 +30,10 @@ class SensorModel:
 
         ####################################
         # Adjust these parameters
-        self.alpha_hit = 0.74
-        self.alpha_short = 0.07
-        self.alpha_max = 0.07
-        self.alpha_rand = 0.12
+        self.alpha_hit = 0.50
+        self.alpha_short = 0.08
+        self.alpha_max = 0.08
+        self.alpha_rand = 0.34
         self.sigma_hit = 8.0
 
         # Your sensor table will be a `table_width` x `table_width` np array:
