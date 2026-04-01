@@ -5,7 +5,10 @@ from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovarianceStamped, PoseArray, Pose
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import TransformStamped
-from tf_transformations import euler_from_quaternion
+# from tf_transformations import euler_from_quaternion
+
+from scipy.spatial.transform import Rotation as R
+
 import tf2_ros
 
 from rclpy.node import Node
@@ -85,7 +88,9 @@ class ParticleFilter(Node):
         x = msg.pose.pose.position.x
         y = msg.pose.pose.position.y
         o = msg.pose.pose.orientation
-        _, _, theta = euler_from_quaternion((o.x, o.y, o.z, o.w))
+
+        quat = [o.x, o.y, o.z, o.w]
+        _, _, theta = R.from_quat(quat).as_euler("xyz")
 
         self.particles = np.zeros((self.num_particles, 3))
         self.particles[:, 0] = x + np.random.normal(0, 0.5, self.num_particles)
