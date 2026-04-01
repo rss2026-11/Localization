@@ -6,6 +6,7 @@ from scan_simulator_2d import PyScanSimulator2D
 from tf_transformations import euler_from_quaternion
 
 from nav_msgs.msg import OccupancyGrid
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy
 
 import sys
 
@@ -60,11 +61,16 @@ class SensorModel:
         # Subscribe to the map
         self.map = None
         self.map_set = False
+        
+        map_qos = QoSProfile(
+            depth=1,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
         self.map_subscriber = node.create_subscription(
             OccupancyGrid,
             self.map_topic,
             self.map_callback,
-            1)
+            map_qos)
 
     def precompute_sensor_model(self):
         """

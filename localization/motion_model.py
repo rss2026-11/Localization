@@ -94,6 +94,7 @@ class MotionModel:
             dx_noisy = dx + np.random.normal(0, self.sigma_x, size=len(particles))
             dy_noisy = dy + np.random.normal(0, self.sigma_y, size=len(particles))
             dtheta_noisy = dtheta + np.random.normal(0, self.sigma_theta, size=len(particles))
+
         else:
             dx_noisy = np.full(len(particles), dx)
             dy_noisy = np.full(len(particles), dy)

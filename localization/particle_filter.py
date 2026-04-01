@@ -116,6 +116,7 @@ class ParticleFilter(Node):
         self.weights = self.sensor_model.evaluate(self.particles, downsampled)
 
         if self.weights is None:
+            self.get_logger().info("no weights")
             return
 
         # Squash weights to keep particle diversity
