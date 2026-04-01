@@ -99,6 +99,7 @@ class ParticleFilter(Node):
 
     def laser_callback(self, msg):
         """Use lidar scan to weight and resample particles."""
+
         if self.particles is None:
             return
 
