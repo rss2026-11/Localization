@@ -89,6 +89,8 @@ class ParticleFilter(Node):
         y = msg.pose.pose.position.y
         o = msg.pose.pose.orientation
 
+        self.get_logger().info("pose callback running")
+
         quat = [o.x, o.y, o.z, o.w]
         _, _, theta = R.from_quat(quat).as_euler("xyz")
 
