@@ -1,6 +1,6 @@
 import numpy as np
 from scan_simulator_2d import PyScanSimulator2D
-# Try to change to just `from scan_simulator_2d import PyScanSimulator2D` 
+# Try to change to just `from scan_simulator_2d import PyScanSimulator2D`
 # if any error re: scan_simulator_2d occurs
 
 from scipy.spatial.transform import Rotation as R
@@ -61,7 +61,7 @@ class SensorModel:
         # Subscribe to the map
         self.map = None
         self.map_set = False
-        
+
         map_qos = QoSProfile(
             depth=1,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
@@ -76,7 +76,7 @@ class SensorModel:
         """
         Generate and store a table which represents the sensor model.
 
-        For each discrete computed range value, this provides the probability of 
+        For each discrete computed range value, this provides the probability of
         measuring any (discrete) range. This table is indexed by the sensor model
         at runtime by discretizing the measurements and computed ranges from
         RangeLibc.
@@ -90,8 +90,8 @@ class SensorModel:
 
         returns:
             No return type. Directly modify `self.sensor_model_table`.
-        """ 
-        
+        """
+
         z_max = self.table_width - 1
         z = np.arange(self.table_width)
 
@@ -100,7 +100,7 @@ class SensorModel:
 
             p_hit = (1 / np.sqrt(2 * np.pi * self.sigma_hit**2)) * np.exp(-(z - d)**2 / (2 * self.sigma_hit**2))
             p_hit = p_hit / p_hit.sum()
-        
+
             if d == 0:
                 p_short = np.zeros(self.table_width)
             else:
@@ -113,7 +113,7 @@ class SensorModel:
             self.sensor_model_table[:, d] = (self.alpha_hit * p_hit + self.alpha_short * p_short + self.alpha_max * p_max + self.alpha_rand * p_rand)
 
         self.sensor_model_table = self.sensor_model_table / self.sensor_model_table.sum(axis=0)
-            
+
 
     def evaluate(self, particles, observation):
         """
@@ -145,7 +145,7 @@ class SensorModel:
         #
         # You will probably want to use this function
         # to perform ray tracing from all the particles.
-        # This produces a matrix of size N x num_beams_per_particle 
+        # This produces a matrix of size N x num_beams_per_particle
 
         scans = self.scan_sim.scan(particles)
 
@@ -166,6 +166,10 @@ class SensorModel:
 
         # Combine beam probabilities per particle
         log_probs = np.sum(np.log(probs), axis=1)
+
+        # PREVENT UNDERFLOW: Subtract max log probability before taking exp().
+        # This keeps the highest probability at 1.0 and scales everything relative to it.
+        log_probs -= np.max(log_probs)
         probabilities = np.exp(log_probs)
 
         return probabilities
@@ -182,7 +186,7 @@ class SensorModel:
         # Convert the origin to a tuple
         origin_p = map_msg.info.origin.position
         origin_o = map_msg.info.origin.orientation
-        
+
         quat = [origin_o.x, origin_o.y, origin_o.z, origin_o.w]
         yaw = R.from_quat(quat).as_euler("xyz")[2]
 
@@ -219,7 +223,7 @@ class SensorModel:
 
 # import numpy as np
 # from scan_simulator_2d import PyScanSimulator2D
-# # Try to change to just `from scan_simulator_2d import PyScanSimulator2D` 
+# # Try to change to just `from scan_simulator_2d import PyScanSimulator2D`
 # # if any error re: scan_simulator_2d occurs
 
 # from tf_transformations import euler_from_quaternion
@@ -289,7 +293,7 @@ class SensorModel:
 #         """
 #         Generate and store a table which represents the sensor model.
 
-#         For each discrete computed range value, this provides the probability of 
+#         For each discrete computed range value, this provides the probability of
 #         measuring any (discrete) range. This table is indexed by the sensor model
 #         at runtime by discretizing the measurements and computed ranges from
 #         RangeLibc.
@@ -303,8 +307,8 @@ class SensorModel:
 
 #         returns:
 #             No return type. Directly modify `self.sensor_model_table`.
-#         """ 
-        
+#         """
+
 #         z_max = self.table_width - 1
 #         z = np.arange(self.table_width)
 
@@ -313,7 +317,7 @@ class SensorModel:
 
 #             p_hit = (1 / np.sqrt(2 * np.pi * self.sigma_hit**2)) * np.exp(-(z - d)**2 / (2 * self.sigma_hit**2))
 #             p_hit = p_hit / p_hit.sum()
-        
+
 #             if d == 0:
 #                 p_short = np.zeros(self.table_width)
 #             else:
@@ -326,7 +330,7 @@ class SensorModel:
 #             self.sensor_model_table[:, d] = (self.alpha_hit * p_hit + self.alpha_short * p_short + self.alpha_max * p_max + self.alpha_rand * p_rand)
 
 #         self.sensor_model_table = self.sensor_model_table / self.sensor_model_table.sum(axis=0)
-            
+
 
 #     def evaluate(self, particles, observation):
 #         """
@@ -358,7 +362,7 @@ class SensorModel:
 #         #
 #         # You will probably want to use this function
 #         # to perform ray tracing from all the particles.
-#         # This produces a matrix of size N x num_beams_per_particle 
+#         # This produces a matrix of size N x num_beams_per_particle
 
 #         scans = self.scan_sim.scan(particles)
 
@@ -379,9 +383,9 @@ class SensorModel:
 
 #         # Combine beam probabilities per particle using log addition
 #         log_probs = np.sum(np.log(probs), axis=1)
-        
+
 #         # PREVENT UNDERFLOW: Subtract the max log_prob before exp()
-#         # This is a standard math trick in particle filters to stop exp() from 
+#         # This is a standard math trick in particle filters to stop exp() from
 #         # dropping your low-probability particles completely to absolute 0.0
 #         log_probs = log_probs - np.max(log_probs)
 #         probabilities = np.exp(log_probs)
